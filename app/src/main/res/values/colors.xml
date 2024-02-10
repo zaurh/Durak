@@ -8,8 +8,15 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="light_grey">#F2F2F2</color>
+    <color name="red">#932323</color>
+    <color name="dark_red">#CC2A2A</color>
+    <color name="light_red">#F86565</color>
     <color name="grey">#E5E5E5</color>
     <color name="dark_grey">#808080</color>
     <color name="blue">#68B0FF</color>
     <color name="dark_green">#93AA7B</color>
+    <color name="green">#4DBE86</color>
+    <color name="light_green">#8ED66A</color>
+    <color name="transparent">#00FFFFFF</color>
+    <color name="yellow">#FFA408</color>
 </resources>

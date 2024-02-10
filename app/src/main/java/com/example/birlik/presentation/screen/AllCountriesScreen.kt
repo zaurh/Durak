@@ -29,18 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.birlik.R
 import com.example.birlik.data.remote.CountryData
-import com.example.birlik.data.toCountryEntity
-import com.example.birlik.presentation.screen.components.CountryItem
+//import com.example.birlik.presentation.screen.components.CountryItem
 import com.example.birlik.presentation.screen.components.MySearchBar
-import com.example.birlik.presentation.viewmodel.RoomViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun AllCountiesScreen(
     navController: NavController,
-    roomViewModel: RoomViewModel
 ) {
-    val selectedCountries = roomViewModel.selectedCountries
+//    val selectedCountries = roomViewModel.selectedCountries
 
     var countryList by remember {
         mutableStateOf(
@@ -61,7 +58,7 @@ fun AllCountiesScreen(
                     Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "")
                 }
             }, title = {
-                Text(text = if (selectedCountries.isNotEmpty()) "${selectedCountries.size}" else "Ölkələr")
+//                Text(text = if (selectedCountries.isNotEmpty()) "${selectedCountries.size}" else "Ölkələr")
             })
         },
         content = {
@@ -76,16 +73,16 @@ fun AllCountiesScreen(
                 ) {
                     MySearchBar(modifier = Modifier.padding(start = 10.dp, end = 10.dp))
                     Spacer(modifier = Modifier.size(20.dp))
-                    LazyColumn {
-                        items(countryList) {
-                            CountryItem(
-                                countryEntity = it.toCountryEntity(),
-                                roomViewModel = roomViewModel,
-                                selectable = false,
-                                navController = navController
-                            )
-                        }
-                    }
+//                    LazyColumn {
+//                        items(countryList) {
+//                            CountryItem(
+//                                countryEntity = it.toCountryEntity(),
+//                                roomViewModel = roomViewModel,
+//                                selectable = false,
+//                                navController = navController
+//                            )
+//                        }
+//                    }
                 }
             }
 

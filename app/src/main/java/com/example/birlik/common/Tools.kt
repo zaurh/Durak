@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +31,7 @@ import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.pow
 
 
 fun myTime(timestamp: Timestamp): String {
@@ -145,4 +143,22 @@ fun isImageFile(uri: Uri, contentResolver: ContentResolver): Boolean {
 fun isVideoFile(uri: Uri, contentResolver: ContentResolver): Boolean {
     val mimeType = contentResolver.getType(uri)
     return mimeType?.startsWith("video/") == true
+}
+
+fun roundToNearestPowerOfTen(value: Int): Int {
+    val magnitude = 10.0.pow(value.toString().length - 1)
+    return (value / magnitude).toInt() * magnitude.toInt()
+}
+
+fun formatNumberWithK(value: Int): String {
+    return when {
+        value in 10000..999999 -> "${value / 1000}K"
+        value >= 1000000 -> "${value / 1000000}M"
+        else -> "$value"
+    }
+}
+
+fun entryPriceCalculate(entryPrice: Long): Int {
+    val sum = entryPrice - entryPrice * 0.2
+    return sum.toInt()
 }

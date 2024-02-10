@@ -63,6 +63,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore-ktx:24.4.1'
     implementation 'com.google.firebase:firebase-storage-ktx:20.1.0'
     implementation 'com.google.firebase:firebase-auth-ktx:21.1.0'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx:18.3.2'
+    implementation 'com.google.firebase:firebase-analytics-ktx:21.2.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
@@ -94,6 +96,7 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.44")
     kapt("com.google.dagger:hilt-android-compiler:2.44")
     implementation 'androidx.hilt:hilt-navigation-compose:1.0.0'
+    implementation 'androidx.hilt:hilt-work:1.0.0'
 
     //ViewPager
     implementation("com.google.accompanist:accompanist-pager:0.17.0")
@@ -126,7 +129,11 @@ dependencies {
     //exo player
     implementation 'com.google.android.exoplayer:exoplayer:2.18.0'
 
-    //Room
-    implementation 'androidx.room:room-ktx:2.2.1'
-    kapt "androidx.room:room-compiler:2.2.1"
+
+    //ads
+    implementation 'com.google.android.gms:play-services-ads:22.6.0'
+
+    //workmanager
+    implementation 'androidx.work:work-runtime:2.8.1'
+
 }

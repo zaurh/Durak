@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.birlik.R
-import com.example.birlik.data.local.CountryEntity
 import com.example.birlik.presentation.screen.components.MySearchBar
 import com.example.birlik.presentation.screen.components.SubjectItem
 
@@ -30,7 +29,7 @@ import com.example.birlik.presentation.screen.components.SubjectItem
 @Composable
 fun CountryScreen(
     navController: NavController,
-    countryEntity: CountryEntity
+//    countryEntity: CountryEntity
 ) {
    
     Scaffold(
@@ -41,7 +40,9 @@ fun CountryScreen(
                 }) {
                     Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "")
                 }
-            }, title = { Text(text = countryEntity.name ?: "Birlik") })
+            }, title = {
+//                Text(text = countryEntity.name ?: "Birlik")
+            })
         },
         content = {
             Column(
@@ -53,14 +54,14 @@ fun CountryScreen(
                     MySearchBar(Modifier.padding(start = 10.dp, end = 10.dp))
                 }
                 Spacer(modifier = Modifier.size(16.dp))
-                LazyColumn{
-                    item { 
-                        SubjectItem(title = "Söhbət", showFlag = true, countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.chat, lastMessage = "@filankes: Salamlar", time = "09:42 AM")
-                        SubjectItem(title = "Nəqliyyat bazarı", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.car, lastMessage = "@isa: bilmirem, gorum ney...", time = "10:22 PM")
-                        SubjectItem(title = "İş yerləri", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.job, lastMessage = "@elnur: sabaha refer ede...", time = "11:02 AM")
-                        SubjectItem(title = "Yeməkxana", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.restaurant, lastMessage = "@jalal: en qeseng restor...", time = "07:41 PM")
-                    }
-                }
+//                LazyColumn{
+//                    item {
+//                        SubjectItem(title = "Söhbət", showFlag = true, countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.chat, lastMessage = "@filankes: Salamlar", time = "09:42 AM")
+//                        SubjectItem(title = "Nəqliyyat bazarı", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.car, lastMessage = "@isa: bilmirem, gorum ney...", time = "10:22 PM")
+//                        SubjectItem(title = "İş yerləri", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.job, lastMessage = "@elnur: sabaha refer ede...", time = "11:02 AM")
+//                        SubjectItem(title = "Yeməkxana", countryImage = countryEntity.image ?: 0, subjectImage = R.drawable.restaurant, lastMessage = "@jalal: en qeseng restor...", time = "07:41 PM")
+//                    }
+//                }
             }
         }
     )

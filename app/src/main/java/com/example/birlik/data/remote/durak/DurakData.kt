@@ -7,29 +7,35 @@ import com.example.birlik.data.remote.UserData
 
 data class DurakData(
     val gameId: String? = null,
+    val title: String? = null,
     val kozr: CardPair? = null,
     val kozrSuit: Int? = null,
+    val placeOnTable: PlaceOnTable? = null,
     val tableOwner: UserData? = null,
-    val tableSize: Int? = 2,
     val selectedCards: List<CardPair> = mutableListOf(),
     var cards: MutableList<CardPair> = mutableListOf(),
     var bita: MutableList<CardPair> = mutableListOf(),
     val playerData: MutableList<PlayerData>? = mutableListOf(),
     val startingPlayer: String? = null,
     val starterTableNumber: Int? = null,
+
     val started: Boolean? = null,
-    val winner: UserData? = null,
+    val cardsOnHands: Boolean? = null,
+
+    val loser: UserData? = null,
     val choseAttacker: Boolean? = null,
     val attacker: String? = null,
     val tableData: TableData? = TableData(),
-    val round: Boolean? = false,
-
-    val cheat: Boolean? = true
+    val rules: Rules? = null,
+    val finished: Boolean = false,
+    val entryPriceCash: Long = 0,
+    val entryPriceCoin: Long = 0,
+    val timer: Int = 0
 
     ) : Parcelable {
 
     init {
-        if (cards.isEmpty()) {
+        if (cards.isEmpty() && started == null) {
             addCards()
         }
     }
@@ -47,8 +53,15 @@ data class DurakData(
         "kozrSuit" to kozrSuit,
         "tableOwner" to tableOwner,
         "startingPlayer" to startingPlayer,
+        "starterTableNumber" to starterTableNumber,
+        "selectedCards" to selectedCards,
+        "placeOnTable" to placeOnTable,
+        "choseAttacker" to choseAttacker,
         "tableData" to tableData,
         "attacker" to attacker,
+        "rules" to rules,
+        "started" to started,
+        "cardsOnHands" to cardsOnHands
     )
 
     fun addCards() {
@@ -73,17 +86,17 @@ data class DurakData(
                 CardPair(10, R.drawable.heart) +
                 CardPair(10, R.drawable.diamond) +
                 CardPair(10, R.drawable.spade) +
-                CardPair(11, R.drawable.club) +
-                CardPair(11, R.drawable.heart) +
-                CardPair(11, R.drawable.diamond) +
-                CardPair(11, R.drawable.spade) +
-                CardPair(12, R.drawable.club) +
-                CardPair(12, R.drawable.heart) +
-                CardPair(12, R.drawable.diamond) +
-                CardPair(12, R.drawable.spade) +
-                CardPair(13, R.drawable.club) +
-                CardPair(13, R.drawable.heart) +
-                CardPair(13, R.drawable.diamond) +
+//                CardPair(11, R.drawable.club) +
+//                CardPair(11, R.drawable.heart) +
+//                CardPair(11, R.drawable.diamond) +
+//                CardPair(11, R.drawable.spade) +
+//                CardPair(12, R.drawable.club) +
+//                CardPair(12, R.drawable.heart) +
+//                CardPair(12, R.drawable.diamond) +
+//                CardPair(12, R.drawable.spade) +
+//                CardPair(13, R.drawable.club) +
+//                CardPair(13, R.drawable.heart) +
+//                CardPair(13, R.drawable.diamond) +
                 CardPair(13, R.drawable.spade) +
                 CardPair(14, R.drawable.club) +
                 CardPair(14, R.drawable.heart) +

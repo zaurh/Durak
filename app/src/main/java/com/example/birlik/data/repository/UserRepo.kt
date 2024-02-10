@@ -1,12 +1,18 @@
 package com.example.birlik.data.repository
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.MutableLiveData
+import com.example.birlik.R
+import com.example.birlik.common.entryPriceCalculate
+import com.example.birlik.data.remote.GameHistory
 import com.example.birlik.data.remote.durak.DurakData
 import com.example.birlik.data.remote.UserData
 import com.example.birlik.data.remote.durak.CardPair
+import com.example.birlik.data.remote.durak.PlaceOnTable
 import com.example.birlik.data.remote.durak.PlayerData
+import com.example.birlik.data.remote.durak.Rules
+import com.example.birlik.data.remote.durak.Skin
+import com.example.birlik.data.remote.durak.SkinSettings
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,6 +21,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.firestore.ktx.toObjects
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
@@ -25,6 +32,7 @@ class UserRepo @Inject constructor(
     private val storage: FirebaseStorage,
     auth: FirebaseAuth,
 ) {
+    var decreaseSecond = MutableLiveData(10)
 
     val isUserLoading = mutableStateOf(false)
 
@@ -44,8 +52,6 @@ class UserRepo @Inject constructor(
 
     val usersData = mutableStateOf<List<UserData>>(emptyList())
     val onlineUsers = mutableStateOf<List<UserData>>(emptyList())
-    val currentUserId = auth.currentUser?.uid
-
 
     init {
         getAllUsers()
@@ -53,15 +59,6 @@ class UserRepo @Inject constructor(
         getDurakTables()
     }
 
-    fun addData(userData: UserData) {
-        firestore.collection("user").document("asjdhasdkj").set(userData)
-            .addOnSuccessListener {
-                isUserLoading.value = false
-            }
-            .addOnFailureListener {
-                isUserLoading.value = false
-            }
-    }
 
     fun addUser(userData: UserData) {
         firestore.collection("user").document(userData.userId ?: "").set(userData)
@@ -82,16 +79,12 @@ class UserRepo @Inject constructor(
     }
 
 
-
-
-
-
     private fun getAllUsers() {
         firestore.collection("user")
             .addSnapshotListener { value, _ ->
-                value?.let { it ->
+                value?.let {
                     usersData.value =
-                        it.toObjects<UserData>().sortedBy { it.username }
+                        it.toObjects()
                 }
             }
     }
@@ -99,13 +92,34 @@ class UserRepo @Inject constructor(
     fun updateUser(
         userData: UserData
     ) {
-        if (currentUserId != null) {
-            firestore.collection("user").document(currentUserId).update(userData.toMap())
-                .addOnSuccessListener {
-                    this._userData.value = userData
-                }
-        }
+        firestore.collection("user").document(userData.userId ?: "").update(userData.toMap())
+            .addOnSuccessListener {
+                this._userData.value = userData
+            }
     }
+
+    fun rewardUser(
+        userData: UserData
+    ) {
+        val updatedUserData = userData.copy(
+            cash = userData.cash + 10000,
+            gameHistory = userData.gameHistory?.apply {
+                add(
+                    GameHistory(
+                        title = "Reklam izləmə",
+                        moneyIcon = R.drawable.birlik_cash,
+                        background = R.color.light_green,
+                        amount = "+10000"
+                    )
+                )
+            }
+        )
+        firestore.collection("user").document(userData.userId ?: "").update(updatedUserData.toMap())
+            .addOnSuccessListener {
+                this._userData.value = updatedUserData
+            }
+    }
+
 
     fun getOnlineUsers() {
         firestore.collection("user").whereEqualTo("status", "online")
@@ -117,7 +131,6 @@ class UserRepo @Inject constructor(
     }
 
 
-    //
     fun oyuncularaKartPayla(
         durakData: DurakData,
         playerData: List<PlayerData>,
@@ -129,8 +142,7 @@ class UserRepo @Inject constructor(
     ) {
         val shuffledNewCards = originalList.shuffled()
 
-        val numPlayers = playerData.size
-        val cardsPerPlayer = when (numPlayers) {
+        val cardsPerPlayer = when (playerData.size) {
             1 -> 6
             2 -> 6 // For 2 players, each gets 6 cards
             3 -> 6 // For 3 players, each gets 6 cards
@@ -157,60 +169,71 @@ class UserRepo @Inject constructor(
 
         // Update player data with the assigned cards
         val updatedPlayerData = playerData.map { player ->
-            player.copy(cards = playerCardsMap[player] ?: listOf(), selectedCard = listOf())
+            player.copy(
+                cards = playerCardsMap[player] ?: listOf(),
+                selectedCard = listOf(),
+            )
         }
 
-        // Update the Firestore document
-        val updateMap = mapOf(
-            "playerData" to updatedPlayerData.map(PlayerData::toMap),
-            "cards" to remainingCards,
-            "kozr" to kozr,
-            "kozrSuit" to kozr.suit,
-            "started" to true
+        val updatedDurakData = durakData.copy(
+            playerData = updatedPlayerData.toMutableList(),
+            cards = remainingCards.toMutableList(),
+            kozr = kozr,
+            kozrSuit = kozr.suit,
+            started = true
         )
 
         // Return the remaining cards via the onComplete callback
         onComplete(shuffledNewCards.subList(startIndex, shuffledNewCards.size))
 
-        firestore.collection("durak").document(durakData.gameId ?: "").set(updateMap, SetOptions.merge()).addOnSuccessListener {
-            onSuccess()
-        }
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .set(updatedDurakData.toMap(), SetOptions.merge()).addOnSuccessListener {
+                onSuccess()
+            }
 
     }
+
 
 
     fun yerdenKartGotur(
         durakData: DurakData,
         player: PlayerData,
+        nextPlayer: PlayerData,
         playerDataList: List<PlayerData>,
-        card: CardPair
+        card: List<CardPair>,
+        nextPlayerCard: List<CardPair>,
+        remainingCards: List<CardPair>,
     ) {
         val updatedPlayerDataList = playerDataList.map { playerData ->
-            if (playerData.userData?.userId == player.userData?.userId) {
-                // Update the cards for the specific player
-                val updatedCards = playerData.cards.orEmpty() + card
-                playerData.copy(cards = updatedCards)
-            } else {
-                playerData
+            when (playerData.userData?.userId) {
+                player.userData?.userId -> {
+                    val updatedCards = player.cards.orEmpty() + card
+                    player.copy(cards = updatedCards)
+                }
+                nextPlayer.userData?.userId -> {
+                    val updatedCards = nextPlayer.cards.orEmpty() + nextPlayerCard
+                    nextPlayer.copy(cards = updatedCards)
+                }
+                else -> playerData
             }
         }
 
-        val updateMap = mapOf(
-            "playerData" to updatedPlayerDataList.map(PlayerData::toMap),
+        val updatedDurakData = durakData.copy(
+            playerData = updatedPlayerDataList.toMutableList(),
+            cards = remainingCards.toMutableList()
         )
 
-        firestore.collection("durak").document(durakData.gameId ?: "").update(updateMap)
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .update(updatedDurakData.toMap())
     }
 
-    fun kozrGotur(durakData: DurakData){
+
+    fun kozrGotur(durakData: DurakData) {
         val updateMap = mapOf(
             "kozr" to null,
         )
         firestore.collection("durak").document(durakData.gameId ?: "").update(updateMap)
     }
-
-
-
 
 
     fun bitayaGetsin(
@@ -225,26 +248,80 @@ class UserRepo @Inject constructor(
         // Append the new cards to the existing bita
         durakData.bita.addAll(cards)
 
-        val updateMap = mapOf(
-            "playerData" to updatedPlayerData.map(PlayerData::toMap),
-            "bita" to durakData.bita,
-            "selectedCards" to listOf<CardPair>()
+        val updatedDurakData = durakData.copy(
+            playerData = updatedPlayerData.toMutableList(),
+            bita = durakData.bita,
+            selectedCards = listOf(),
+            placeOnTable = null
         )
-        firestore.collection("durak").document(durakData.gameId ?: "").update(updateMap)
 
-        updateOyuncuSirasiveStoluCevir(durakData, true)
-        updateRound(durakData, false)
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .update(updatedDurakData.toMap())
+
+        updateOyuncuSirasiveStoluCevir(updatedDurakData, true)
+    }
+
+    fun eldekiKartlariTemizle(
+        durakData: DurakData,
+        playerData: PlayerData,
+        perevodKartlari: List<CardPair>,
+        selectedCard: CardPair
+    ) {
+        val playerDataList = durakData.playerData?.toMutableList() ?: mutableListOf()
+
+        for (index in playerDataList.indices) {
+            // Clear the selectedCard for all players
+            playerDataList[index] = playerDataList[index].copy(selectedCard = emptyList())
+        }
+
+        val playerIndex =
+            playerDataList.indexOfFirst { it.userData?.username == playerData.userData?.username }
+
+        if (playerIndex != -1) {
+            // Add perevodKartlari to the selectedCard list only for playerIndex
+            playerDataList[playerIndex] = playerDataList[playerIndex].copy(
+                selectedCard = playerDataList[playerIndex].selectedCard?.plus(perevodKartlari),
+                cards = playerDataList[playerIndex].cards?.toMutableList()?.apply {
+                    // Remove the selected card from the cards list
+                    remove(
+                        if ((selectedCard.number
+                                ?: 0) > 14
+                        ) selectedCard.copy(number = selectedCard.number?.minus(15)) else selectedCard
+                    )
+                },
+                lastDroppedCardNum = selectedCard
+
+            )
+
+            // Update only the playerData field in Firestore
+            firestore.collection("durak").document(durakData.gameId ?: "")
+                .update("playerData", playerDataList.map(PlayerData::toMap))
+        }
     }
 
 
-    fun oyunuBaslat(durakData: DurakData, tableOwner: UserData) {
+    fun oyunuBaslat(
+        durakData: DurakData,
+        tableOwner: UserData,
+        rules: Rules,
+        entryPriceCash: Long = 0,
+        entryPriceCoin: Long = 0
+    ) {
         val randomId = UUID.randomUUID().toString()
 
         val durak = durakData.copy(
             gameId = randomId,
-            tableOwner = tableOwner
+            tableOwner = tableOwner,
+            rules = rules,
+            entryPriceCash = entryPriceCash,
+            entryPriceCoin = entryPriceCoin
         )
         firestore.collection("durak").document(randomId).set(durak)
+        stolaOtur(
+            durakData.copy(gameId = randomId),
+            PlayerData(userData = userData.value, cards = null),
+            tableNumber = 1
+        )
 
     }
 
@@ -256,7 +333,83 @@ class UserRepo @Inject constructor(
         }
     }
 
-    fun yereKartDus(durakData: DurakData, playerData: PlayerData, selectedCard: CardPair, rotate: Boolean = false) {
+    fun refreshCards(
+        durakData: DurakData,
+        userData: UserData,
+        playerData: PlayerData,
+        card: List<CardPair>
+    ) {
+        val playerDataList = durakData.playerData?.toMutableList() ?: mutableListOf()
+
+        // Find the index of the playerData to update
+        val playerIndex =
+            playerDataList.indexOfFirst { it.userData?.username == playerData.userData?.username }
+
+        if (playerIndex != -1) {
+            val updatedPlayerData = playerDataList[playerIndex].copy(
+                cards = playerDataList[playerIndex].cards?.toMutableList()?.apply {
+                    removeAll(card)
+                    addAll(card)
+                }
+            )
+
+            playerDataList[playerIndex] = updatedPlayerData
+
+            // Update only the playerData field in Firestore
+            firestore.collection("durak").document(durakData.gameId ?: "")
+                .update("playerData", playerDataList.map(PlayerData::toMap))
+
+            firestore.collection("user").document(userData.userId ?: "").update(userData.toMap())
+                .addOnSuccessListener {
+                    this._userData.value = userData
+                }
+        }
+    }
+
+
+    fun attackFirst(
+        durakData: DurakData,
+        placeOnTable: PlaceOnTable
+    ) {
+
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .update("placeOnTable", placeOnTable.toMap())
+    }
+
+//
+//    fun sampleFunction(
+//        userData: UserData,
+//        person: Person
+//    ){
+//        val updatedUserData = userData.copy(
+//            username = "newOne",
+//            //person == it is list, so I cannot pass it
+//        )
+//        //I do something on UserData, For example I change 'name' field in UserData
+//        anotherFunction(userData, person)
+//        //When I call "anotherFunction" and passes userData, it takes old userData. I want to take updated one
+//    }
+//
+//    fun anotherFunction(
+//        userData: UserData,
+//        person: Person
+//    ){
+//        val currentPerson = userData.blockList.find{it.username == person.username}
+//
+//        //I do something to currentPerson
+//
+//        firestore.collection("user").document(userData.userId ?: "").update(userData.toMap())
+//    }
+
+    fun yereKartDus(
+        durakData: DurakData,
+        playerData: PlayerData,
+        selectedCard: CardPair,
+        rotate: Boolean = false,
+        changeAttacker: Boolean = false,
+        placeOnTable: PlaceOnTable,
+        perevodKartlari: List<CardPair>
+    ) {
         // Assuming playerDataList is mutable
         val playerDataList = durakData.playerData?.toMutableList() ?: mutableListOf()
 
@@ -271,25 +424,39 @@ class UserRepo @Inject constructor(
                     ?: listOf(),
                 cards = playerDataList[playerIndex].cards?.toMutableList()?.apply {
                     // Remove the selected card from the cards list
-                    val kozrSelectedCard = selectedCard.copy(number = selectedCard.number?.plus(15))
-                    remove(if ((selectedCard.number ?: 0) > 14) selectedCard.copy(number = selectedCard.number?.minus(15)) else selectedCard )
+                    remove(
+                        if ((selectedCard.number
+                                ?: 0) > 14
+                        ) selectedCard.copy(number = selectedCard.number?.minus(15)) else selectedCard
+                    )
                 },
                 lastDroppedCardNum = selectedCard
             )
             playerDataList[playerIndex] = updatedPlayerData
 
-            // Update only the playerData field in Firestore
+            val updatedDurakData = durakData.copy(
+                placeOnTable = placeOnTable,
+                playerData = playerDataList
+            )
+
+                // Update only the playerData field in Firestore
             firestore.collection("durak").document(durakData.gameId ?: "")
                 .update("playerData", playerDataList.map(PlayerData::toMap))
+            firestore.collection("durak").document(durakData.gameId ?: "")
+                .update("placeOnTable", placeOnTable.toMap()).addOnSuccessListener {
+                    if (rotate && changeAttacker) {
+                        updateOyuncuSirasiveStoluCevir(updatedDurakData, perevod = true)
+                        eldekiKartlariTemizle(updatedDurakData, playerData, perevodKartlari, selectedCard)
+                    } else if (rotate) {
+                        updateOyuncuSirasiveStoluCevir(updatedDurakData)
+                    }
+                    updateYerdekiKartlar(updatedDurakData, selectedCard)
+                }
         }
-        if (rotate){
-            updateOyuncuSirasiveStoluCevir(durakData)
-        }
-        updateRound(durakData, true)
-        updateYerdekiKartlar(durakData, selectedCard)
     }
 
-    fun eleYig(durakData: DurakData, playerData: PlayerData, selectedCards: List<CardPair>){
+
+    fun eleYig(durakData: DurakData, playerData: PlayerData, selectedCards: List<CardPair>) {
         val playerDataList = durakData.playerData?.toMutableList() ?: mutableListOf()
 
         val playerIndex =
@@ -309,15 +476,20 @@ class UserRepo @Inject constructor(
                     ?: listOf()
             )
             playerDataList[playerIndex] = updatedPlayerData
-
-            // Update only the playerData field in Firestore
-            firestore.collection("durak").document(durakData.gameId ?: "")
-                .update("playerData", playerDataList.map(PlayerData::toMap))
-            firestore.collection("durak").document(durakData.gameId ?: "")
-                .update("selectedCards", listOf<CardPair>())
         }
-        updateOyuncuSirasiveStoluCevir(durakData, true)
-        updateRound(durakData, false)
+        val updatedDurakData = durakData.copy(
+            selectedCards = listOf(),
+            placeOnTable = null,
+            playerData = playerDataList
+        )
+            // Update only the playerData field in Firestore
+        firestore.collection("durak").document(durakData.gameId ?: "")
+                .update("playerData", playerDataList.map(PlayerData::toMap))
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .update(updatedDurakData.toMap())
+
+        updateOyuncuSirasiveStoluCevir(updatedDurakData, true)
+
     }
 
 
@@ -331,7 +503,8 @@ class UserRepo @Inject constructor(
     }
 
     fun stolaOtur(durakData: DurakData, playerData: PlayerData, tableNumber: Int) {
-        val updatedPlayerData = playerData.copy(tableNumber = tableNumber, playerId = playerData.userData?.userId)
+        val updatedPlayerData =
+            playerData.copy(tableNumber = tableNumber, playerId = playerData.userData?.userId)
 
         val updatedDurakData = hashMapOf<String, Any>(
             "playerData" to FieldValue.arrayUnion(updatedPlayerData)
@@ -347,8 +520,41 @@ class UserRepo @Inject constructor(
             .update(updatedDurakData)
     }
 
+    fun stoldanQalx(durakData: DurakData, userId: String) {
+        val updatedPlayerList = durakData.playerData?.filterNot { it.userData?.userId == userId }
+        val firstTableFull = durakData.tableData?.firstTable?.userId == userId
+        val secondTableFull = durakData.tableData?.secondTable?.userId == userId
+        val thirdTableFull = durakData.tableData?.thirdTable?.userId == userId
+
+        val updateMap = mutableMapOf<String, Any?>()
+
+        if (firstTableFull) {
+            updateMap["tableData.firstTable"] = null
+        } else if (secondTableFull) {
+            updateMap["tableData.secondTable"] = null
+        } else if (thirdTableFull) {
+            updateMap["tableData.thirdTable"] = null
+        }
+
+        updateMap["playerData"] = updatedPlayerList
+
+        val gameId = durakData.gameId ?: ""
+
+        if (updateMap.isNotEmpty()) {
+            firestore.collection("durak").document(gameId)
+                .update(updateMap)
+        } else {
+            // Handle the case where no updates are needed
+        }
+    }
 
 
+    fun setTimer(durakData: DurakData, timer: Int, onComplete: () -> Unit) {
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .update(mapOf("timer" to timer)).addOnSuccessListener {
+                onComplete()
+            }
+    }
 
 
     fun updateDurakData(update: (DurakData) -> DurakData) {
@@ -358,27 +564,28 @@ class UserRepo @Inject constructor(
     }
 
     fun updateDurakCards(durakData: DurakData, cards: MutableList<CardPair>) {
-        val updateMap = mapOf(
-            "cards" to cards
+        val updatedDurakData = durakData.copy(
+            cards = cards
         )
 
         firestore.collection("durak").document(durakData.gameId ?: "")
-            .update(updateMap)
+            .update(updatedDurakData.toMap())
     }
 
-    fun updateOyuncuSirasi(durakData: DurakData, startingPlayer: String, starterTableNumber: Int){
-        val updateMap = mapOf(
-            "startingPlayer" to startingPlayer,
-            "starterTableNumber" to starterTableNumber,
-            "attacker" to startingPlayer,
-            "choseAttacker" to true
+    fun updateOyuncuSirasi(durakData: DurakData, startingPlayer: String, starterTableNumber: Int) {
+        val updatedDurakData = durakData.copy(
+            startingPlayer = startingPlayer,
+            starterTableNumber = starterTableNumber,
+            attacker = startingPlayer,
+            choseAttacker = true,
+            cardsOnHands = true
         )
 
         firestore.collection("durak").document(durakData.gameId ?: "")
-            .update(updateMap)
+            .update(updatedDurakData.toMap())
     }
 
-    fun updateHucumcu(durakData: DurakData, attacker: String){
+    fun updateHucumcu(durakData: DurakData, attacker: String) {
         val updateMap = mapOf(
             "attacker" to attacker
         )
@@ -387,27 +594,95 @@ class UserRepo @Inject constructor(
             .update(updateMap)
     }
 
-    fun winGame(durakData: DurakData, userData: UserData, onSuccess: () -> Unit){
+    fun loseGame(durakData: DurakData, loser: UserData, winner: UserData, onSuccess: () -> Unit) {
         val updateMap = mapOf(
-            "winner" to userData
+            "loser" to loser,
+            "finished" to true
         )
 
         firestore.collection("durak").document(durakData.gameId ?: "")
             .update(updateMap).addOnSuccessListener {
                 onSuccess()
             }
-    }
 
-    fun updateRound(durakData: DurakData, round: Boolean){
-        val updateMap = mapOf(
-            "round" to round
+        val ratingPrice =
+            if (winner.rating - loser.rating > 10000) 10
+            else if (winner.rating - loser.rating > 1000) 25
+            else if (winner.rating - loser.rating >= 0) 50
+            else if (winner.rating - loser.rating > -1000) 75
+            else if (winner.rating - loser.rating > -10000) 100
+            else 150
+
+        val moneyIcon =
+            if (durakData.entryPriceCash == 0.toLong() && durakData.entryPriceCoin == 0.toLong()) R.drawable.birlik_cash
+            else if (durakData.entryPriceCash != 0.toLong()) R.drawable.birlik_cash
+            else if (durakData.entryPriceCoin != 0.toLong()) R.drawable.birlik_coin
+            else R.drawable.car
+
+        val entryPrice = maxOf(durakData.entryPriceCash, durakData.entryPriceCoin, 0.toLong())
+
+        val amount =
+            if (durakData.entryPriceCash != 0L) "${entryPriceCalculate(durakData.entryPriceCash)}"
+            else if (durakData.entryPriceCoin != 0L) "${entryPriceCalculate(durakData.entryPriceCoin)}"
+            else ""
+
+        val updatedWinnerData = winner.copy(
+            cash = winner.cash + entryPriceCalculate(durakData.entryPriceCash),
+            coin = winner.coin + entryPriceCalculate(durakData.entryPriceCoin),
+            rating = winner.rating + ratingPrice,
+            gameHistory = winner.gameHistory?.apply {
+                add(
+                    GameHistory(
+                        title = "Qələbə",
+                        winner = "${winner.username}",
+                        loser = "${loser.username}",
+                        game = "Durak",
+                        moneyIcon = moneyIcon,
+                        amount = if (amount.isEmpty()) "" else "+$amount",
+                        background = R.color.light_green,
+                        rating = "+$ratingPrice"
+                    )
+                )
+            },
+            durakWinCount = winner.durakWinCount + 1
+        )
+        val updatedLoserData = loser.copy(
+            cash = loser.cash - durakData.entryPriceCash.toInt(),
+            coin = loser.coin - durakData.entryPriceCoin.toInt(),
+            rating = (if (loser.rating > 150) loser.rating - ratingPrice * 1.2.toInt() else loser.rating),
+            gameHistory = loser.gameHistory?.apply {
+                add(
+                    GameHistory(
+                        title = "Məğlubiyyət",
+                        winner = "${winner.username}",
+                        loser = "${loser.username}",
+                        game = "Durak",
+                        moneyIcon = moneyIcon,
+                        amount = if (entryPrice != 0.toLong()) "-$entryPrice" else "",
+                        background = R.color.light_red,
+                        rating = "-$ratingPrice"
+                    )
+                )
+            },
+            durakLoseCount = loser.durakLoseCount + 1
         )
 
-        firestore.collection("durak").document(durakData.gameId ?: "")
-            .update(updateMap)
+        firestore.collection("user").document(winner.userId ?: "").update(
+            updatedWinnerData.toMap()
+        )
+
+        firestore.collection("user").document(loser.userId ?: "").update(
+            updatedLoserData.toMap()
+        )
     }
 
-    fun updateYerdekiKartlar(durakData: DurakData, selectedCard: CardPair){
+
+    fun deleteGame(durakData: DurakData) {
+        firestore.collection("durak").document(durakData.gameId ?: "")
+            .delete()
+    }
+
+    fun updateYerdekiKartlar(durakData: DurakData, selectedCard: CardPair) {
         val updateMap = mapOf(
             "selectedCards" to durakData.selectedCards.plus(selectedCard)
         )
@@ -416,7 +691,11 @@ class UserRepo @Inject constructor(
             .update(updateMap)
     }
 
-    fun updateOyuncuSirasiveStoluCevir(durakData: DurakData, updateHucumcu: Boolean = false) {
+    fun updateOyuncuSirasiveStoluCevir(
+        durakData: DurakData,
+        updateHucumcu: Boolean = false,
+        perevod: Boolean = false,
+    ) {
         // Rotate the table number
         val nextTableNumber = (durakData.starterTableNumber ?: 0) % 2 + 1
 
@@ -427,20 +706,20 @@ class UserRepo @Inject constructor(
             else -> null
         }
 
-        // Update the starter and the table number
-        val updateMap = mapOf(
-            "startingPlayer" to nextStarter,
-            "starterTableNumber" to nextTableNumber
+        val updatedDurakData = durakData.copy(
+            startingPlayer = nextStarter,
+            starterTableNumber = nextTableNumber
         )
 
         firestore.collection("durak").document(durakData.gameId ?: "")
-            .update(updateMap)
-        if (updateHucumcu){
+            .update(updatedDurakData.toMap())
+
+        if (updateHucumcu) {
             updateHucumcu(durakData, nextStarter ?: "")
+        } else if (perevod) {
+            updateHucumcu(durakData, durakData.startingPlayer ?: "")
         }
     }
-
-
 
 
     fun deleteAllGames() {
@@ -449,6 +728,13 @@ class UserRepo @Inject constructor(
                 for (document in documents) {
                     document.reference.delete()
                 }
+            }
+    }
+
+    fun changeSkin(userData: UserData) {
+        firestore.collection("user").document(userData.userId ?: "").update(userData.toMap())
+            .addOnSuccessListener {
+                this._userData.value = userData
             }
     }
 

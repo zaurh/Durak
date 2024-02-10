@@ -3,9 +3,9 @@
 package com.example.birlik.presentation.screen
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,24 +16,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -49,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,16 +51,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
+import com.example.birlik.common.NavParam
+import com.example.birlik.common.navigateTo
 import com.example.birlik.data.remote.UserData
-import com.example.birlik.data.remote.durak.DurakData
-import com.example.birlik.presentation.screen.components.CountryItem
 import com.example.birlik.presentation.viewmodel.AuthViewModel
-import com.example.birlik.presentation.viewmodel.RoomViewModel
 import com.example.birlik.presentation.viewmodel.UserViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -78,33 +67,44 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     navController: NavController,
     authViewModel: AuthViewModel,
-    userViewModel: UserViewModel,
-    roomViewModel: RoomViewModel
+    userViewModel: UserViewModel
 ) {
+    val context = LocalContext.current
+
+    val sharedPreferences = context.getSharedPreferences("countdown", Context.MODE_PRIVATE)
+    var progress by remember { mutableStateOf(sharedPreferences.getInt("progress", 10)) }
+
+
+
     val currentUserId by authViewModel.currentUserId.collectAsState()
-    val userData = userViewModel.userData.collectAsState()
-    val countryData = roomViewModel.countryData.observeAsState(listOf())
-    val selectedCountries = roomViewModel.selectedCountries
+    val userData = userViewModel.userDataState.collectAsState()
+//    val countryData = roomViewModel.countryData.observeAsState(listOf())
+//    val selectedCountries = roomViewModel.selectedCountries
     var dropdownState by remember { mutableStateOf(false) }
     var searchState by remember { mutableStateOf(false) }
 
     val updatedUserData = rememberUpdatedState(userData)
 
-    val context = LocalContext.current
 
 
     LaunchedEffect(true) {
         currentUserId?.let { userId ->
             userViewModel.getUserData(userId)
         }
+        while (progress > 0) {
+            delay(1000)
+            progress = sharedPreferences.getInt("progress", 10)
+        }
     }
 
+//
+//    if (selectedCountries.isNotEmpty()) {
+//        BackHandler(onBack = {
+//            selectedCountries.clear()
+//        })
+//    }
 
-    if (selectedCountries.isNotEmpty()) {
-        BackHandler(onBack = {
-            selectedCountries.clear()
-        })
-    }
+
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -112,6 +112,13 @@ fun MainScreen(
     ) {
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
+        BackHandler(
+            enabled = drawerState.isOpen,
+        ) {
+            scope.launch {
+                drawerState.close()
+            }
+        }
         ModalNavigationDrawer(
             drawerContent = {
                 ModalDrawerSheet {
@@ -141,12 +148,12 @@ fun MainScreen(
                                     Text(text = "${userData.value?.country?.name}")
                                     Spacer(modifier = Modifier.size(8.dp))
                                     userData.value?.country?.image?.let {
-                                        val countryImageDrawable = painterResource(id = it)
-                                        Image(
-                                            modifier = Modifier.size(20.dp),
-                                            painter = countryImageDrawable,
-                                            contentDescription = ""
-                                        )
+//                                        val countryImageDrawable = painterResource(id = it)
+//                                        Image(
+//                                            modifier = Modifier.size(20.dp),
+//                                            painter = countryImageDrawable,
+//                                            contentDescription = ""
+//                                        )
                                     }
                                 }
                             }
@@ -165,6 +172,9 @@ fun MainScreen(
 //                                scope.launch {
 //                                    drawerState.close()
 //                                }
+                                      if (item.title == "Ayarlar"){
+                                          navigateTo(navController, "profile_screen", NavParam("userData", userData.value ?: UserData()))
+                                      }
                             },
                             icon = {
                                 Icon(
@@ -188,73 +198,75 @@ fun MainScreen(
                 topBar = {
                     TopAppBar(
                         navigationIcon = {
-                            if (selectedCountries.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    selectedCountries.clear()
-                                }) {
-                                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                                }
-                            }else{
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        drawerState.open()
-                                    }
-                                }) {
-                                    Icon(imageVector = Icons.Default.Menu, contentDescription = "")
-                                }
-                            }
+//                            if (selectedCountries.isNotEmpty()) {
+//                                IconButton(onClick = {
+//                                    selectedCountries.clear()
+//                                }) {
+//                                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+//                                }
+//                            }else{
+//                                IconButton(onClick = {
+//                                    scope.launch {
+//                                        drawerState.open()
+//                                    }
+//                                }) {
+//                                    Icon(imageVector = Icons.Default.Menu, contentDescription = "")
+//                                }
+//                            }
 
                         },
                         title = {
-                            Text(text = if (selectedCountries.isNotEmpty()) "${selectedCountries.size}" else "oyun")
+                            Text(text = "Countdown: $progress")
+
+//                            Text(text = if (selectedCountries.isNotEmpty()) "${selectedCountries.size}" else "oyun")
                         },
                         actions = {
-                            if (selectedCountries.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    dropdownState = true
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = ""
-                                    )
-                                }
-                                if (dropdownState) {
-                                    DropdownMenu(
-                                        expanded = dropdownState,
-                                        onDismissRequest = { dropdownState = false })
-                                    {
-                                        DropdownMenuItem(
-                                            text = { Text(text = "Sil") },
-                                            onClick = {
-                                                for (country in selectedCountries) {
-                                                    roomViewModel.deleteCountry(
-                                                        countryEntity = country
-                                                    )
-                                                }
-                                                selectedCountries.clear()
-                                            })
-                                        if (countryData.value.size > 1){
-                                            DropdownMenuItem(
-                                                text = { Text(text = "Hamısını seç") },
-                                                onClick = {
-                                                    selectedCountries.clear()
-                                                    selectedCountries.addAll(countryData.value)
-                                                    dropdownState = false
-                                                })
-                                        }
-
-                                    }
-                                }
-                            } else {
-                                IconButton(onClick = {
-                                    searchState = !searchState
-                                }) {
-                                    Icon(
-                                        imageVector = if (searchState) Icons.Default.SearchOff else Icons.Default.Search,
-                                        contentDescription = ""
-                                    )
-                                }
-                            }
+//                            if (selectedCountries.isNotEmpty()) {
+//                                IconButton(onClick = {
+//                                    dropdownState = true
+//                                }) {
+//                                    Icon(
+//                                        imageVector = Icons.Default.MoreVert,
+//                                        contentDescription = ""
+//                                    )
+//                                }
+//                                if (dropdownState) {
+//                                    DropdownMenu(
+//                                        expanded = dropdownState,
+//                                        onDismissRequest = { dropdownState = false })
+//                                    {
+//                                        DropdownMenuItem(
+//                                            text = { Text(text = "Sil") },
+//                                            onClick = {
+//                                                for (country in selectedCountries) {
+//                                                    roomViewModel.deleteCountry(
+//                                                        countryEntity = country
+//                                                    )
+//                                                }
+//                                                selectedCountries.clear()
+//                                            })
+//                                        if (countryData.value.size > 1){
+//                                            DropdownMenuItem(
+//                                                text = { Text(text = "Hamısını seç") },
+//                                                onClick = {
+//                                                    selectedCountries.clear()
+//                                                    selectedCountries.addAll(countryData.value)
+//                                                    dropdownState = false
+//                                                })
+//                                        }
+//
+//                                    }
+//                                }
+//                            } else {
+//                                IconButton(onClick = {
+//                                    searchState = !searchState
+//                                }) {
+//                                    Icon(
+//                                        imageVector = if (searchState) Icons.Default.SearchOff else Icons.Default.Search,
+//                                        contentDescription = ""
+//                                    )
+//                                }
+//                            }
 
                         },
                     )
@@ -273,24 +285,19 @@ fun MainScreen(
                                     Text(text = "tables")
                                 }
                                 Button(onClick = {
-                                    userViewModel.oyunuBaslat(DurakData(), userData.value ?: UserData())
-                                }) {
-                                    Text(text = "start")
-                                }
-                                Button(onClick = {
                                     userViewModel.deleteAllGames()
                                 }) {
                                     Text(text = "Delete")
                                 }
                             }
-                            items(countryData.value) {
-                                CountryItem(
-                                    countryEntity = it,
-                                    roomViewModel = roomViewModel,
-                                    selectable = true,
-                                    navController = navController
-                                )
-                            }
+//                            items(countryData.value) {
+//                                CountryItem(
+//                                    countryEntity = it,
+//                                    roomViewModel = roomViewModel,
+//                                    selectable = true,
+//                                    navController = navController
+//                                )
+//                            }
                         }
                     }
                 },

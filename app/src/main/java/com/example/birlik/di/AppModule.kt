@@ -1,9 +1,7 @@
 package com.example.birlik.di
 
 import android.app.Application
-import androidx.room.Room
-import com.example.birlik.data.local.CountryDatabase
-import com.example.birlik.data.repository.RoomRepo
+import com.example.birlik.data.AppLifecycleCallbacks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -36,6 +34,8 @@ object AppModule {
     @Provides
     fun provideStorage(): FirebaseStorage = Firebase.storage
 
+
+
 //    //Retrofit
 //    @Singleton
 //    @Provides
@@ -51,18 +51,12 @@ object AppModule {
 //        return retrofit.create(RetrofitApi::class.java)
 //    }
 
-    //Room
-    @Singleton
+
+
     @Provides
-    fun provideRoomDatabase(app: Application): CountryDatabase {
-        return Room.databaseBuilder(
-            app,
-            CountryDatabase::class.java,
-            "birlik"
-        ).build()
+    @Singleton
+    fun provideAppLifecycleCallbacks(): AppLifecycleCallbacks {
+        return AppLifecycleCallbacks()
     }
 
-    @Singleton
-    @Provides
-    fun provideCountryRepoLocal(db: CountryDatabase): RoomRepo = RoomRepo(db.countryDao())
 }

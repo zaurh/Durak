@@ -9,8 +9,8 @@ data class PlayerData(
     val userData: UserData? = null,
     val cards: List<CardPair>? = emptyList(),
     val lastDroppedCardNum: CardPair? = null,
-    val selectedCard: List<CardPair>? = emptyList(),
-    val tableNumber: Int? = null
+    var selectedCard: List<CardPair>? = emptyList(),
+    val tableNumber: Int? = null,
 ): Parcelable {
 
     fun toMap() = mapOf(
@@ -19,7 +19,7 @@ data class PlayerData(
         "cards" to cards,
         "lastDroppedCardNum" to lastDroppedCardNum,
         "selectedCard" to selectedCard,
-        "tableNumber" to tableNumber
+        "tableNumber" to tableNumber,
     )
 
     constructor(parcel: Parcel) : this(
