@@ -20,16 +20,27 @@ https://github.com/zaurh/Durak/assets/56722725/81ed4267-16c7-459b-adec-85c9dbfd6
 
 
 Kotlin
+
 Jetpack compose
+
 MVVM
+
 Firebase Auth (authenticating users)
+
 Firebase Firestore (storing user and game data)
+
 Firebase Storage (uploading profile image)
+
 Coil (loading images asynchronously)
+
 Navigation (navigating between composables)
+
 Dagger Hilt (dependency injection)
+
 Preferences Datastore (saving dark theme)
+
 Figma (icons of cards and skins)
+
 Ads (playing reward ads)
 
 
