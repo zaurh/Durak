@@ -10,7 +10,7 @@ Durak is a traditional Russian card game that is popular in many post-Soviet s
 DOWNLOAD LINK VIA GITHUB: https://github.com/zaurh/APK/raw/main/durak.apk
 
 # Preview
-https://i.hizliresim.com/mlvf46r.png
+![App Screenshot](https://i.hizliresim.com/mlvf46r.png)
 
 
 
