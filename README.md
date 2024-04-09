@@ -4,6 +4,9 @@ Hello everyone! I'm excited to share with you one of the biggest projects, Card 
 
 Durak is a traditional Russian card game that is popular in many post-Soviet states.
 
+
+DOWNLOAD LINK VIA GITHUB: https://github.com/zaurh/APK/raw/main/durak.apk
+
 # Preview
 
 
