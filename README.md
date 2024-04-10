@@ -50,23 +50,38 @@ Ads (playing reward ads)
  
 📢 General features:
 Authentication: You can sign up with your email and password. If you forget your password, don't worry. There is also a password-recovery feature.
+
 Language support: There are 4 languages. [EN], [RU], [TR], [AZ]
+
 Account: You can set a username and image.
+
 What's new: You will be informed about new updates.
+
 Promo: You can get certain amounts of prizes by entering promo codes. (try "jetpack")
+
 Report: If you have any problems or bugs, please use this and send me feedback.
+
 Dark Mode: You can switch your theme to dark mode.
+
 Searching: If there are too many tables, don't worry; you can find them out.
  
 🎮 Game features:
 Cash and Coins: You will need cash and coins to create your table and play. When you win the game, you will get your money back and +80% of the table price. Don't worry. You can also create a table and play for free!
+
 Rating: It will show how strong a player you are. There is a rating algorithm in the game. So, if you manage to win someone who has a higher rating than you, you will get a higher rating, and vice versa.
+
 Skins: You can customize the background of your back, your table, and also your background. Background skins are only applied when the table owner is you.
+
 Achievements: There are also some achievements you can earn. Once you hit a certain amount of rating or win count, you will get free table skins!
+
 Watch AD: You can watch an ad and get +5000 cash in return. You can find it in your shop, right next to your coin.
+
 Leaderboard: If you love competition, you will love the leaderboard too. You can find the strongest players there.
+
 Rules: So far, we have only two modes. Rotation mode and standard.
+
 Tables: So far, we have only two tables. But in the future, it will be extended.
+
 Timer: Each round, you will have 20 seconds to move. If not, you will lose the game.
 
 
