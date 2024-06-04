@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:322984623660:android:88e16d4d40750cb15e9b89",
+        "mobilesdk_app_id": "1:322984623660:android:73a7c6e0cb8c96e25e9b89",
         "android_client_info": {
-          "package_name": "com.example.birlik"
+          "package_name": "com.zaurh.durak"
         }
       },
       "oauth_client": [],

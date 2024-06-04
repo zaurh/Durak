@@ -7,6 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="whiteLight">#4DFFFFFF</color>
     <color name="light_grey">#F2F2F2</color>
     <color name="red">#932323</color>
     <color name="dark_red">#CC2A2A</color>
@@ -19,4 +20,6 @@
     <color name="light_green">#8ED66A</color>
     <color name="transparent">#00FFFFFF</color>
     <color name="yellow">#FFA408</color>
+    <color name="light_yellow">#FFECCC</color>
+    <color name="bronze">#CD7F32</color>
 </resources>
